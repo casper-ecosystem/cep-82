@@ -10,6 +10,7 @@
 !/.gitignorte
 !/rust-toolchain
 !/rebuild_all.sh
+!/rebuild_all_test.sh
 !/wasm/
 !/.gitignore
 !/README.md

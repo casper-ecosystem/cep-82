@@ -15,7 +15,7 @@ test-support=["contract-common/test-support", "casper-contract/test-support"]
 base64 = { version = "0.21.0", default-features = false, features = ["alloc"] }
 casper-contract = { version = "1.4.4", default-features = false }
 casper-types = { version = "1.5.0" }
-contract-common = { path = "../contract_common" }
+contract-common = { path = "../contract_common", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 once_cell = { version = "1.17.1", default-features = false, features = ["alloc"] }
 paste = "1.0.12"
