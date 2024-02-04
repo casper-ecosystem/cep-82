@@ -63,9 +63,8 @@ pub fn bid(post_id: u64, source_purse: URef, amount: U512) {
 
     let nft_contract = NftContractMetadata::by_id(entry.nft_contract_id);
 
-    if let Some(custodial_package) = nft_contract.custodial_package {
+    if nft_contract.is_custodial_wrapper {
         let royalty_amount = ext::cep82::custodial::calculate_royalty(
-            custodial_package,
             nft_contract.nft_package,
             &entry.token_id,
             entry.price,
@@ -96,7 +95,6 @@ pub fn bid(post_id: u64, source_purse: URef, amount: U512) {
         );
 
         ext::cep82::custodial::pay_royalty(
-            custodial_package,
             nft_contract.nft_package,
             &entry.token_id,
             royalty_purse,
@@ -170,7 +168,7 @@ pub fn cancel(post_id: u64) {
 
 pub fn register_cep78_contract(
     nft_package: ContractPackageHash,
-    custodial_package: Option<ContractPackageHash>,
+    is_custodial_wrapper: bool,
 ) {
     let mut counters = Counters::read();
     let contract_id = counters.post_id;
@@ -179,7 +177,7 @@ pub fn register_cep78_contract(
 
     let entry = NftContractMetadata {
         nft_package,
-        custodial_package,
+        is_custodial_wrapper,
     };
 
     entry.write(contract_id);

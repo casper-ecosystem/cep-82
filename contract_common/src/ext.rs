@@ -3,7 +3,7 @@ pub mod cep78 {
     use crate::{named_arg, trace_block};
     use alloc::{string::String, vec};
     use casper_contract::contract_api::runtime;
-    use casper_types::{ContractPackageHash, Key};
+    use casper_types::Key;
 
     pub fn transfer(
         token_id: &TokenIdentifier,
@@ -125,10 +125,10 @@ pub mod cep82 {
 
         pub fn calculate_royalty(
             package: ContractPackageHash,
-            token_contract: ContractPackageHash,
             token_id: &TokenIdentifier,
             payment_amount: U512,
         ) -> U512 {
+            let token_contract = token_id.package;
             trace_block! {{
                 runtime::call_versioned_contract::<U512>(
                     package,
@@ -146,7 +146,6 @@ pub mod cep82 {
         #[allow(clippy::too_many_arguments)]
         pub fn pay_royalty(
             package: ContractPackageHash,
-            token_contract: ContractPackageHash,
             token_id: &TokenIdentifier,
             source_purse: URef,
             payer: Key,
@@ -154,6 +153,7 @@ pub mod cep82 {
             target_key: Key,
             payment_amount: U512,
         ) {
+            let token_contract = token_id.package;
             trace_block! {{
                 runtime::call_versioned_contract::<()>(
                     package,

@@ -26,6 +26,6 @@ entrypoints! {
 
     [public contract] fn register_cep78_contract(
         nft_package: ContractPackageHash,
-        custodial_package: Option<ContractPackageHash>,
+        is_custodial_wrapper: bool,
     ) -> () = crate::register_cep78_contract;
 }

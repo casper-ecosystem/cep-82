@@ -3,10 +3,9 @@
 use alloc::{format, string::String, vec::Vec};
 use casper_contract::contract_api::runtime;
 use casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
+    bytesrepr::FromBytes,
     Key, URef,
 };
-use token::TokenIdentifier;
 
 extern crate alloc;
 
@@ -52,18 +51,6 @@ impl<T: AsRef<[u8]>> ToStrKey for T {
         String::from_utf8_lossy(self.as_ref()).into_owned()
     }
 }
-
-// TODO: Remove this function altogether from the project
-// pub fn b64<T: AsRef<[u8]>>(input: T) -> alloc::string::String {
-//     // TODO: Remove these comments
-//     // use base64::Engine;
-//     // base64::prelude::BASE64_STANDARD_NO_PAD.encode(input.as_ref())
-//     input.to_key()
-// }
-
-// pub fn b64_cl<T: ToBytes>(input: &T) -> alloc::string::String {
-//     b64(input.to_bytes().unwrap())
-// }
 
 pub fn store_named_key_incremented(key: Key, name: &str) {
     for i in 0.. {

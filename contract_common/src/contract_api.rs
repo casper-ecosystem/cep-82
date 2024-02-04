@@ -1,6 +1,3 @@
-//! SAFETY: Copied almost verbatim from `casper_contract`, slightly modified to allow error handling (seriously we have to do this?)
-//! and some other things
-
 use core::mem::MaybeUninit;
 
 use crate::prelude::*;

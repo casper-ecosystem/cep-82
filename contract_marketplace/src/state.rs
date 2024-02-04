@@ -10,7 +10,7 @@ serializable_structs! {
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct NftContractMetadata {
         pub nft_package: ContractPackageHash,
-        pub custodial_package: Option<ContractPackageHash>,
+        pub is_custodial_wrapper: bool,
     }
 
     #[derive(Debug, Clone, PartialEq, Eq)]
