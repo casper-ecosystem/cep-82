@@ -1,4 +1,4 @@
-use contract_common::{prelude::*, FromNamedArg};
+use contract_common::{prelude::*, FromNamedArg, ToStrKey};
 use num_traits::AsPrimitive;
 
 use crate::CustodialError;
@@ -14,7 +14,8 @@ named_keys! {
 }
 
 pub fn is_marketplace_whitelisted(marketplace: ContractPackageHash) -> bool {
-    whitelisted_marketplaces::try_read(&b64_cl(&marketplace)).unwrap_or(false)
+    let marketplace_key = marketplace.to_key();
+    whitelisted_marketplaces::try_read(&marketplace_key).unwrap_or(false)
 }
 
 #[allow(clippy::large_enum_variant)]

@@ -6,11 +6,11 @@ pub mod cep78 {
     use casper_types::{ContractPackageHash, Key};
 
     pub fn transfer(
-        package: ContractPackageHash,
         token_id: &TokenIdentifier,
         source_key: Key,
         target_key: Key,
     ) {
+        let package = token_id.package;
         trace_block! {{
             runtime::call_versioned_contract::<(String, Key)>(
                 package,
@@ -26,7 +26,8 @@ pub mod cep78 {
         }}
     }
 
-    pub fn metadata(package: ContractPackageHash, token_id: TokenIdentifier) -> String {
+    pub fn metadata(token_id: TokenIdentifier) -> String {
+        let package = token_id.package;
         trace_block! {{
             runtime::call_versioned_contract::<String>(
                 package,
@@ -37,7 +38,8 @@ pub mod cep78 {
         }}
     }
 
-    pub fn owner_of(package: ContractPackageHash, token_id: &TokenIdentifier) -> Key {
+    pub fn owner_of(token_id: &TokenIdentifier) -> Key {
+        let package = token_id.package;
         trace_block! {{
             runtime::call_versioned_contract::<Key>(
                 package,
@@ -48,7 +50,8 @@ pub mod cep78 {
         }}
     }
 
-    pub fn get_approved(package: ContractPackageHash, token_id: &TokenIdentifier) -> Option<Key> {
+    pub fn get_approved(token_id: &TokenIdentifier) -> Option<Key> {
+        let package = token_id.package;
         trace_block! {{
             runtime::call_versioned_contract::<Option<Key>>(
                 package,

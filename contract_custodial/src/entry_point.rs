@@ -17,14 +17,13 @@ entrypoint! {
 }
 
 entrypoints! {
-    [public contract] fn can_transfer(
+    [public contract] fn transfer(
         token_id: TokenIdentifier,
         source_key: Key,
         target_key: Key
-    ) -> u8 = crate::can_transfer;
+    ) -> () = crate::transfer;
 
     [public contract] fn pay_royalty(
-        token_contract: ContractPackageHash,
         token_id: TokenIdentifier,
         source_purse: URef,
         payer: Key,
@@ -34,7 +33,6 @@ entrypoints! {
     ) -> () = crate::pay_royalty;
 
     [public contract] fn calculate_royalty(
-        token_contract: ContractPackageHash,
         token_id: TokenIdentifier,
         payment_amount: U512,
     ) -> U512 = crate::calculate_royalty;

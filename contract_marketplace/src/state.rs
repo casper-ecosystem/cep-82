@@ -2,7 +2,7 @@ use alloc::{format, string::String, vec::Vec};
 use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
 use casper_contract::contract_api::runtime;
 use casper_types::{ContractPackageHash, Key, URef, U512};
-use contract_common::{b64_cl, o_unwrap, token::TokenIdentifier};
+use contract_common::{o_unwrap, token::TokenIdentifier, ToStrKey};
 
 use crate::{named_keys, serializable_structs, MarketError};
 
@@ -101,13 +101,14 @@ impl OrderbookEntry {
 }
 
 pub fn post_id_by_token_id(token_id: &TokenIdentifier) -> Option<u64> {
-    post_id_by_token_id::try_read(&b64_cl(token_id))
+    post_id_by_token_id::try_read(&token_id.to_key())
 }
 
 pub fn set_post_id_by_token_id(token_id: &TokenIdentifier, id: Option<u64>) {
+    let token_key = token_id.to_key();
     match id {
-        Some(id) => post_id_by_token_id::write(&b64_cl(token_id), id),
-        None => post_id_by_token_id::remove(&b64_cl(token_id)),
+        Some(id) => post_id_by_token_id::write(&token_key, id),
+        None => post_id_by_token_id::remove(&token_key),
     }
 }
 

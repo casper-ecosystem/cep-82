@@ -1,11 +1,12 @@
 #![no_std]
 
-use alloc::{format, string::ToString, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 use casper_contract::contract_api::runtime;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     Key, URef,
 };
+use token::TokenIdentifier;
 
 extern crate alloc;
 
@@ -29,7 +30,7 @@ pub mod prelude {
     };
 
     pub use crate::{
-        b64, b64_cl, contract_api::try_get_named_arg, ensure, ensure_eq, ensure_neq, entrypoint,
+        contract_api::try_get_named_arg, ensure, ensure_eq, ensure_neq, entrypoint,
         entrypoints, error::CommonError, forward_entrypoints, named_arg, named_key, named_keys,
         serializable_structs, st_non_sync_static,
     };
@@ -42,26 +43,37 @@ pub mod ext;
 pub mod macros;
 pub mod token;
 
-pub fn b64<T: AsRef<[u8]>>(input: T) -> alloc::string::String {
-    use base64::Engine;
-
-    base64::prelude::BASE64_STANDARD_NO_PAD.encode(input.as_ref())
+pub trait ToStrKey {
+    fn to_key(&self) -> String;
 }
 
-pub fn b64_cl<T: ToBytes>(input: &T) -> alloc::string::String {
-    b64(input.to_bytes().unwrap())
+impl<T: AsRef<[u8]>> ToStrKey for T {
+    fn to_key(&self) -> String {
+        String::from_utf8_lossy(self.as_ref()).into_owned()
+    }
 }
+
+// TODO: Remove this function altogether from the project
+// pub fn b64<T: AsRef<[u8]>>(input: T) -> alloc::string::String {
+//     // TODO: Remove these comments
+//     // use base64::Engine;
+//     // base64::prelude::BASE64_STANDARD_NO_PAD.encode(input.as_ref())
+//     input.to_key()
+// }
+
+// pub fn b64_cl<T: ToBytes>(input: &T) -> alloc::string::String {
+//     b64(input.to_bytes().unwrap())
+// }
 
 pub fn store_named_key_incremented(key: Key, name: &str) {
     for i in 0.. {
-        let name_full = if i == 0 {
-            name.to_string()
-        } else {
-            format!("{name}_{i}")
+        let formatted_name = match i {
+            0 => format!("{name}"),
+            _ => format!("{name}_{i}")
         };
 
-        if runtime::get_key(&name_full).is_none() {
-            runtime::put_key(&name_full, key);
+        if runtime::get_key(&formatted_name).is_none() {
+            runtime::put_key(&formatted_name, key);
             break;
         }
     }

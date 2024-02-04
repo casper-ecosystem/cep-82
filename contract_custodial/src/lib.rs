@@ -2,8 +2,7 @@
 
 use alloc::{collections::BTreeMap, string::ToString};
 use contract_common::{
-    call_stack::CallStackElementEx, o_unwrap, prelude::*, store_named_key_incremented,
-    token::TokenIdentifier,
+    call_stack::CallStackElementEx, o_unwrap, prelude::*, store_named_key_incremented, token::TokenIdentifier, ToStrKey
 };
 use state::{RoyaltyPaymentState, RoyaltyStructure};
 
@@ -16,21 +15,19 @@ pub mod state;
 pub const NK_ACCESS_UREF: &str = "cep82_custodial_uref";
 pub const NK_CONTRACT: &str = "cep82_custodial";
 pub const NK_ROYALTY_PURSE: &str = "royalty_purse";
-
 pub const NAME: &str = "custodial";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum CustodialError {
-    MarketplaceNotWhitelisted,
-    CallerMustBeContract,
-    CallerMustBeApproved,
-    SelfTransferForbidden,
-
-    SourceMustBeOwner,
-    AlreadyPaid,
-
-    Overflow,
+    MarketplaceNotWhitelisted = 100,
+    CallerMustBeContract = 101,
+    CallerMustBeApproved = 102,
+    SelfTransferForbidden = 103,
+    SourceMustBeOwner = 104,
+    AlreadyPaid = 105,
+    MustPayRoyalties = 106,
+    Overflow = 107,
 }
 
 impl From<CustodialError> for ApiError {
@@ -70,13 +67,13 @@ fn init(whitelisted_marketplaces: Vec<ContractPackageHash>) {
         state::marketplace_whitelist_enabled::write(true);
 
         for marketplace in whitelisted_marketplaces {
-            state::whitelisted_marketplaces::write(&b64_cl(&marketplace), true);
+            let marketplace_key = marketplace.to_key();
+            state::whitelisted_marketplaces::write(&marketplace_key, true);
         }
     }
 }
 
 fn pay_royalty(
-    token_contract: ContractPackageHash,
     token_id: TokenIdentifier,
     source_purse: URef,
     payer: Key,
@@ -84,11 +81,11 @@ fn pay_royalty(
     target_key: Key,
     payment_amount: U512,
 ) {
-    let royalty_purse = runtime::get_key(NK_ROYALTY_PURSE)
-        .unwrap_or_revert()
-        .into_uref()
-        .unwrap_or_revert();
-    let total_royalty = calculate_royalty_inner(&token_id, payment_amount);
+    ensure_neq!(
+        source_key,
+        target_key,
+        CustodialError::SelfTransferForbidden
+    );
 
     let caller_contract_hash: Key = o_unwrap!(
         contract_common::call_stack::caller()
@@ -103,32 +100,33 @@ fn pay_royalty(
         CustodialError::CallerMustBeContract
     );
 
+    let is_whitelisted = (!state::marketplace_whitelist_enabled::read())
+    || state::is_marketplace_whitelisted(caller_contract_package);
+    ensure!(is_whitelisted, CustodialError::MarketplaceNotWhitelisted);
+
     let approved = o_unwrap!(
-        contract_common::ext::cep78::get_approved(token_contract, &token_id),
+        contract_common::ext::cep78::get_approved(&token_id),
         CustodialError::CallerMustBeApproved
     );
-
     ensure_eq!(
         caller_contract_hash,
         approved,
         CustodialError::CallerMustBeApproved
     );
 
-    let is_whitelisted = (!state::marketplace_whitelist_enabled::read())
-        || state::is_marketplace_whitelisted(caller_contract_package);
-
-    ensure!(is_whitelisted, CustodialError::MarketplaceNotWhitelisted);
-
-    let current_owner = contract_common::ext::cep78::owner_of(token_contract, &token_id);
-
+    let current_owner = contract_common::ext::cep78::owner_of(&token_id);
     ensure_eq!(current_owner, source_key, CustodialError::SourceMustBeOwner);
-    ensure_neq!(
-        source_key,
-        target_key,
-        CustodialError::SelfTransferForbidden
-    );
 
-    let old_payment_state = state::royalty_payments::try_read(&b64_cl(&token_id));
+    let royalty_purse = runtime::get_key(NK_ROYALTY_PURSE)
+        .unwrap_or_revert()
+        .into_uref()
+        .unwrap_or_revert();
+
+    let total_royalty = calculate_royalty(token_id.clone(), payment_amount);
+
+    let token_key = token_id.to_key();
+
+    let old_payment_state = state::royalty_payments::try_read(&token_key);
     if let Some(RoyaltyPaymentState::Paid {
         source_key: paid_source_key,
         ..
@@ -151,51 +149,42 @@ fn pay_royalty(
         amount: total_royalty,
     };
 
-    state::royalty_payments::write(&b64_cl(&token_id), payment_state);
+    state::royalty_payments::write(&token_key, payment_state);
 }
 
-fn calculate_royalty_inner(_token_id: &TokenIdentifier, payment_amount: U512) -> U512 {
+// This sample custodial implementation applies the same royalty regardless
+// of the token. The interface is left open for those who wish to implement
+// a more sophisticated royalty scheme.
+fn calculate_royalty(
+    _token_id: TokenIdentifier,
+    payment_amount: U512,
+) -> U512 {
     let royalty_structure = state::royalty_structure::read();
     royalty_structure.calculate_total_royalty(payment_amount)
 }
 
-fn calculate_royalty(
-    _token_contract: ContractPackageHash,
-    token_id: TokenIdentifier,
-    payment_amount: U512,
-) -> U512 {
-    calculate_royalty_inner(&token_id, payment_amount)
-}
-
-fn can_transfer(token_id: TokenIdentifier, source_key: Key, _target_key: Key) -> u8 {
-    const PROCEED: u8 = 1;
-    const DENY: u8 = 0;
-
-    let key = b64_cl(&token_id);
-    let payment_state = state::royalty_payments::read(&key);
-
-    let caller = o_unwrap!(
+fn transfer(token_id: TokenIdentifier, source_key: Key, target_key: Key) {
+    o_unwrap!(
         contract_common::call_stack::caller().contract_package(),
         CustodialError::CallerMustBeContract
     );
 
-    let current_owner = contract_common::ext::cep78::owner_of(caller, &token_id);
+    let key = token_id.to_key();
+    let payment_state = state::royalty_payments::read(&key);
 
-    match payment_state {
-        RoyaltyPaymentState::Unpaid => DENY,
-        RoyaltyPaymentState::Paid {
-            source_key: paid_source_key,
-            ..
-        } => {
-            if source_key == paid_source_key && source_key == current_owner {
-                // NB: it is ok to write `Unpaid` here, even though this technically happens *before* the transfer,
-                // because an unsuccessful transfer attempt will revert the whole deploy
-                state::royalty_payments::write(&key, RoyaltyPaymentState::Unpaid);
+    let RoyaltyPaymentState::Paid { source_key: payment_key, .. } = payment_state else {
+        casper_contract::contract_api::runtime::revert(CustodialError::MustPayRoyalties);
+    };
 
-                PROCEED
-            } else {
-                DENY
-            }
-        }
+    let current_owner = contract_common::ext::cep78::owner_of(&token_id);
+
+    if source_key == payment_key && source_key == current_owner {
+        contract_common::ext::cep78::transfer(
+            &token_id,
+            source_key,
+            target_key
+        );
+
+        state::royalty_payments::write(&key, RoyaltyPaymentState::Unpaid);
     }
 }

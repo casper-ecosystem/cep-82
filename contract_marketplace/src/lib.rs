@@ -24,17 +24,13 @@ pub const NAME: &str = "marketplace";
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum MarketError {
-    InvalidMethodAccess,
-    InvalidPaymentAmount,
-
-    MustBeApproved,
-
-    UnsupportedNFTContract,
-
-    UnknownPostId,
-    UnknownTokenId,
-
-    ArithmeticOverflow,
+    InvalidMethodAccess = 201,
+    InvalidPaymentAmount= 202,
+    MustBeApproved= 203,
+    UnsupportedNFTContract = 204,
+    UnknownPostId = 205,
+    UnknownTokenId = 206,
+    ArithmeticOverflow = 207,
 }
 
 impl From<MarketError> for ApiError {
@@ -111,7 +107,6 @@ pub fn bid(post_id: u64, source_purse: URef, amount: U512) {
     }
 
     ext::cep78::transfer(
-        nft_contract.nft_package,
         &entry.token_id,
         entry.owner,
         bidder,
@@ -122,24 +117,22 @@ pub fn bid(post_id: u64, source_purse: URef, amount: U512) {
 }
 
 pub fn post(
-    nft_contract: ContractPackageHash,
     token_id: TokenIdentifier,
     target_purse: URef,
     price: U512,
 ) -> u64 {
     let caller = call_stack::caller().key();
-
-    let (nft_contract_id, _) = NftContractMetadata::by_package_hash(nft_contract);
+    let (nft_contract_id, _) = NftContractMetadata::by_package_hash(token_id.package);
 
     let approved = o_unwrap!(
-        ext::cep78::get_approved(nft_contract, &token_id),
+        ext::cep78::get_approved(&token_id),
         MarketError::MustBeApproved
     );
 
     let this: Key = call_stack::current_contract().into();
     ensure_eq!(approved, this, MarketError::MustBeApproved);
 
-    let owner = ext::cep78::owner_of(nft_contract, &token_id);
+    let owner = ext::cep78::owner_of(&token_id);
     ensure_eq!(owner, caller, MarketError::InvalidMethodAccess);
 
     let mut counters = Counters::read();
@@ -187,5 +180,6 @@ pub fn register_cep78_contract(
         nft_package,
         custodial_package,
     };
+
     entry.write(contract_id);
 }

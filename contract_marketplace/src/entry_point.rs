@@ -15,7 +15,6 @@ entrypoints! {
     [public contract] fn bid(post_id: u64, source_purse: URef, amount: U512) -> () = crate::bid;
 
     [public contract] fn post(
-        nft_contract: ContractPackageHash,
         token_id: TokenIdentifier,
         target_purse: URef,
         price: U512,
