@@ -53,12 +53,13 @@ pub fn install() {
 
 pub fn bid(post_id: u64, source_purse: URef, amount: U512) {
     let entry = OrderbookEntry::by_id(post_id);
-    let bidder = call_stack::caller().key();
-    let owner = entry.owner;
 
     if amount < entry.price {
         revert(MarketError::InvalidPaymentAmount);
     }
+    
+    let bidder = call_stack::caller().key();
+    let owner = entry.owner;
 
     let nft_contract = NftContractMetadata::by_id(entry.nft_contract_id);
 
@@ -121,9 +122,6 @@ pub fn post(
     target_purse: URef,
     price: U512,
 ) -> u64 {
-    let caller = call_stack::caller().key();
-    let (nft_contract_id, _) = NftContractMetadata::by_package_hash(token_id.package);
-
     let approved = o_unwrap!(
         ext::cep78::get_approved(&token_id),
         MarketError::MustBeApproved
@@ -132,8 +130,11 @@ pub fn post(
     let this: Key = call_stack::current_contract().into();
     ensure_eq!(approved, this, MarketError::MustBeApproved);
 
+    let caller = call_stack::caller().key();
     let owner = ext::cep78::owner_of(&token_id);
     ensure_eq!(owner, caller, MarketError::InvalidMethodAccess);
+
+    let (nft_contract_id, _) = NftContractMetadata::by_package_hash(token_id.package);
 
     let mut counters = Counters::read();
     let post_id = counters.post_id;
