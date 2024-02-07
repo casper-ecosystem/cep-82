@@ -1,16 +1,12 @@
-/*
-**/target
+common/debug/
+common/target/
+custodial/debug/
+custodial/target/
+marketplace/debug/
+marketplace/target/
 
-!/contract_custodial/
-!/contract_marketplace/
-!/contract_common/
-!/contract_testutil/
-!/contract_marketplace/
-!/tests/
-!/.gitignorte
-!/rust-toolchain
-!/rebuild_all.sh
-!/rebuild_all_test.sh
-!/wasm/
-!/.gitignore
-!/README.md
+Cargo.lock
+
+**/*.rs.bk
+
+*.pdb
