@@ -13,6 +13,7 @@ forward_entrypoints! {
     ep: [
         bid,
         post,
-        cancel
+        cancel_posting,
+        register_custodial_contract
     ]
 }

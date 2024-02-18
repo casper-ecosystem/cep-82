@@ -1,11 +1,11 @@
 #![no_std]
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::{String, ToString}, vec::Vec};
 use casper_contract::contract_api::runtime;
 use casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    Key, URef,
+    bytesrepr::FromBytes, ContractPackageHash, Key, URef
 };
+use token::TokenIdentifier;
 
 extern crate alloc;
 
@@ -46,9 +46,24 @@ pub trait ToStrKey {
     fn to_key(&self) -> String;
 }
 
-impl<T: ToBytes> ToStrKey for T {
+impl ToStrKey for ContractPackageHash {
     fn to_key(&self) -> String {
-        String::from_utf8_lossy(self.to_bytes().unwrap().as_ref()).into_owned()
+        self.to_string()
+    }
+}
+
+impl ToStrKey for TokenIdentifier {
+    fn to_key(&self) -> String {
+        match self {
+            TokenIdentifier::Index(index) => format!("token-{index}"),
+            TokenIdentifier::Hash(hash) => format!("token-{hash}"),
+        }
+    }
+}
+
+impl ToStrKey for u64 {
+    fn to_key(&self) -> String {
+        format!("{self}")
     }
 }
 

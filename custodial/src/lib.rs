@@ -28,6 +28,7 @@ pub enum CustodialError {
     AlreadyPaid = 105,
     MustPayRoyalties = 106,
     Overflow = 107,
+    InvalidRoyaltyScheme = 108,
 }
 
 impl From<CustodialError> for ApiError {
@@ -161,7 +162,10 @@ fn calculate_royalty(
     _token_id: TokenIdentifier,
     payment_amount: U512,
 ) -> U512 {
-    let royalty_structure = state::royalty_structure::read();
+    let royalty_structure = o_unwrap!(
+        state::royalty_structure::try_read(),
+        CustodialError::InvalidRoyaltyScheme
+    );
     royalty_structure.calculate_total_royalty(payment_amount)
 }
 

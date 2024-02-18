@@ -12,7 +12,7 @@ entrypoint! {
 }
 
 entrypoints! {
-    [public contract] fn bid(post_id: u64, source_purse: URef, amount: U512) -> () = crate::bid;
+    [public contract] fn bid(post_id: u64, amount: U512) -> () = crate::bid;
 
     [public contract] fn post(
         token_contract: ContractPackageHash,
