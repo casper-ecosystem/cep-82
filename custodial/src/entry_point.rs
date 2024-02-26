@@ -17,12 +17,11 @@ entrypoint! {
 }
 
 entrypoints! {
-    [public contract] fn transfer(
-        token_contract: ContractPackageHash,
+    [public contract] fn can_transfer(
         token_id: TokenIdentifier,
         source_key: Key,
         target_key: Key
-    ) -> () = crate::transfer;
+    ) -> u8 = crate::can_transfer;
 
     [public contract] fn pay_royalty(
         token_contract: ContractPackageHash,

@@ -169,8 +169,11 @@ fn calculate_royalty(
     royalty_structure.calculate_total_royalty(payment_amount)
 }
 
-fn transfer(token_contract: ContractPackageHash, token_id: TokenIdentifier, source_key: Key, target_key: Key) {
-    o_unwrap!(
+fn can_transfer(token_id: TokenIdentifier, source_key: Key, target_key: Key) -> u8 {
+    const PROCEED: u8 = 1;
+    const DENY: u8 = 0;
+
+    let token_contract = o_unwrap!(
         common::call_stack::caller().contract_package(),
         CustodialError::CallerMustBeContract
     );
@@ -185,13 +188,10 @@ fn transfer(token_contract: ContractPackageHash, token_id: TokenIdentifier, sour
     let current_owner = common::ext::cep78::owner_of(token_contract, &token_id);
 
     if source_key == payment_key && source_key == current_owner {
-        common::ext::cep78::transfer(
-            token_contract,
-            &token_id,
-            source_key,
-            target_key
-        );
-
         state::royalty_payments::write(&key, RoyaltyPaymentState::Unpaid);
+        
+        return PROCEED;
     }
+
+    return DENY;
 }

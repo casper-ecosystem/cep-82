@@ -12,7 +12,7 @@ forward_entrypoints! {
 forward_entrypoints! {
     ep: [
         calculate_royalty,
-        transfer,
+        can_transfer,
         pay_royalty,
     ]
 }

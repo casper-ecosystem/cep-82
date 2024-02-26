@@ -120,9 +120,8 @@ pub mod cep82 {
 
         use crate::{named_arg, token::TokenIdentifier, trace_block};
 
-        pub fn transfer(
+        pub fn can_transfer(
             package: ContractPackageHash,
-            token_contract: ContractPackageHash,
             token_id: &TokenIdentifier,
             source_key: Key,
             target_key: Key,
@@ -131,9 +130,8 @@ pub mod cep82 {
                 runtime::call_versioned_contract::<()>(
                     package,
                     None,
-                    "transfer",
+                    "can_transfer",
                     vec![
-                        named_arg!(token_contract),
                         token_id.to_named_arg(),
                         named_arg!(source_key),
                         named_arg!(target_key),

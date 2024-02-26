@@ -5,8 +5,6 @@ extern crate alloc;
 pub mod entry_point;
 pub mod state;
 
-use casper_contract::contract_api::account;
-
 use common::{
     call_stack::{self, CallStackElementEx},
     ext, o_unwrap,
@@ -54,90 +52,75 @@ pub fn install() {
     store_named_key_incremented(contract_hash.into(), NK_CONTRACT);
 }
 
-pub fn bid(post_id: u64, amount: U512) {
-    let source_purse = account::get_main_purse();
+pub fn bid(
+    source_purse: URef,
+    post_id: u64,
+    amount: U512
+) {   
+    let entry = OrderbookEntry::by_id(post_id);
 
-    let owned_purse = casper_contract::contract_api::system::create_purse();
-
-    casper_contract::contract_api::system::transfer_from_purse_to_purse(
-        source_purse,
-        owned_purse,
-        amount,
-        None,
-    ).unwrap_or_revert();
+    if amount < entry.price {
+        revert(MarketError::InvalidPaymentAmount);
+    }
     
-    // let entry = OrderbookEntry::by_id(post_id);
+    let source_key = entry.owner;
+    let target_key = call_stack::caller().key();
 
-    // if amount < entry.price {
-    //     revert(MarketError::InvalidPaymentAmount);
-    // }
-    
-    // let source_key = entry.owner;
-    // let target_key = call_stack::caller().key();
+    let custodial_package = get_custodial_package_by_nft_package(entry.token_contract);
+    if let Some(custodial_package) = custodial_package {
+        let royalty_amount = ext::cep82::custodial::calculate_royalty(
+            custodial_package,
+            entry.token_contract,
+            &entry.token_id,
+            entry.price,
+        );
 
-    // let custodial_package = get_custodial_package_by_nft_package(entry.token_contract);
-    // if let Some(custodial_package) = custodial_package {
-    //     let royalty_amount = ext::cep82::custodial::calculate_royalty(
-    //         custodial_package,
-    //         entry.token_contract,
-    //         &entry.token_id,
-    //         entry.price,
-    //     );
+        let owned_purse = casper_contract::contract_api::system::create_purse();
 
-    //     let owned_purse = casper_contract::contract_api::system::create_purse();
-
-    //     let remaining_amount = amount
-    //         .checked_sub(royalty_amount)
-    //         .unwrap_or_revert_with(MarketError::ArithmeticOverflow);
+        let remaining_amount = amount
+            .checked_sub(royalty_amount)
+            .unwrap_or_revert_with(MarketError::ArithmeticOverflow);
         
-    //     r_unwrap!(
-    //         casper_contract::contract_api::system::transfer_from_purse_to_purse(
-    //             account::get_main_purse(),
-    //             owned_purse,
-    //             royalty_amount,
-    //             None,
-    //         )
-    //     );
+        r_unwrap!(
+            casper_contract::contract_api::system::transfer_from_purse_to_purse(
+                source_purse,
+                owned_purse,
+                royalty_amount,
+                None,
+            )
+        );
 
-    //     let target_purse = o_unwrap!(get_target_purse_by_post_id(post_id), MarketError::UnknownPostId);
-    //     r_unwrap!(
-    //         casper_contract::contract_api::system::transfer_from_purse_to_purse(
-    //             account::get_main_purse(),
-    //             target_purse,
-    //             remaining_amount,
-    //             None,
-    //         )
-    //     );
+        let target_purse = o_unwrap!(get_target_purse_by_post_id(post_id), MarketError::UnknownPostId);
+        r_unwrap!(
+            casper_contract::contract_api::system::transfer_from_purse_to_purse(
+                source_purse,
+                target_purse,
+                remaining_amount,
+                None,
+            )
+        );
 
-    //     ext::cep82::custodial::pay_royalty(
-    //         custodial_package,
-    //         entry.token_contract,
-    //         &entry.token_id,
-    //         owned_purse,
-    //         target_key,
-    //         source_key,
-    //         target_key,
-    //         entry.price,
-    //     );
+        ext::cep82::custodial::pay_royalty(
+            custodial_package,
+            entry.token_contract,
+            &entry.token_id,
+            owned_purse,
+            target_key,
+            source_key,
+            target_key,
+            entry.price,
+        );
+    }
 
-    //     ext::cep82::custodial::transfer(
-    //         custodial_package,
-    //         entry.token_contract,
-    //         &entry.token_id,
-    //         source_key,
-    //         target_key
-    //     );
-    // } else {
-    //     ext::cep78::transfer(
-    //         entry.token_contract,
-    //         &entry.token_id,
-    //         source_key,
-    //         target_key
-    //     );
-    // };
+    ext::cep78::transfer(
+        entry.token_contract,
+        &entry.token_id,
+        source_key,
+        target_key
+    );
 
-    // unset_target_purse_by_post_id(post_id);
-    // OrderbookEntry::remove(post_id);
+    unset_target_purse_by_post_id(post_id);
+    OrderbookEntry::remove(post_id);
 }
 
 pub fn post(
